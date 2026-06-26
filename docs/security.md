@@ -34,7 +34,7 @@ Passwortrateangriffe sehr langsam (je nach Hardware ~Millisekunden pro Versuch, 
 **Nirgendwo auf der Festplatte.** Das Passwort existiert nur im Arbeitsspeicher (RAM), für die
 Dauer der laufenden Anwendung. Konkret:
 
-- Die Variable `DB_KEY` in `db.py` hält das Passwort als Python-String im RAM.
+- Die Variable `DB_KEY` in `backend/db.py` hält das Passwort als Python-String im RAM.
 - Beim Beenden der App wird der Prozess beendet und der RAM freigegeben.
 - Es gibt keine Passwort-Datei, keinen Keychain-Eintrag, keine `.env`-Datei.
 
@@ -45,8 +45,8 @@ Das Passwort wird bei jedem Start neu eingegeben (oder per `MONETA_KEY`-Umgebung
 ## Startup-Ablauf
 
 ```
-./run.sh
-  └─► python main.py
+./scripts/run.sh
+  └─► python backend/main.py
         ├─► sqlcipher3 importierbar? → ENCRYPTION_AVAILABLE = True
         ├─► MONETA_KEY-Umgebungsvariable gesetzt?
         │     JA  → Passwort aus Umgebungsvariable
@@ -64,7 +64,7 @@ Das Passwort wird bei jedem Start neu eingegeben (oder per `MONETA_KEY`-Umgebung
 
 ---
 
-## Wie eine Datenbankverbindung geöffnet wird (`db.py`)
+## Wie eine Datenbankverbindung geöffnet wird (`backend/db.py`)
 
 ```python
 conn = _db_module.connect(str(DB_PATH))        # Datei öffnen
@@ -132,7 +132,7 @@ Für automatisierte Setups (z. B. Skripte, Startartikel bei Login) kann das Pass
 Umgebungsvariable übergeben werden:
 
 ```bash
-MONETA_KEY="meinPasswort" ./run.sh
+MONETA_KEY="meinPasswort" ./scripts/run.sh
 ```
 
 **Sicherheitshinweis:** Umgebungsvariablen sind auf macOS nicht für andere Benutzer sichtbar

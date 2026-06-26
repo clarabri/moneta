@@ -36,7 +36,7 @@ Moneta ist eine lokale Web-App zur Verwaltung von Konten, Transaktionen, Budgets
 ```bash
 git clone <repo-url>
 cd moneta
-./setup.sh
+./scripts/setup.sh
 ```
 
 Das Skript installiert SQLCipher (via Homebrew), legt eine virtuelle Python-Umgebung an und lädt alle Abhängigkeiten.
@@ -44,7 +44,7 @@ Das Skript installiert SQLCipher (via Homebrew), legt eine virtuelle Python-Umge
 ## Starten
 
 ```bash
-./run.sh
+./scripts/run.sh
 ```
 
 Die App öffnet sich automatisch unter `http://localhost:8000`. Mit `Ctrl+C` beenden.
@@ -52,12 +52,12 @@ Die App öffnet sich automatisch unter `http://localhost:8000`. Mit `Ctrl+C` bee
 Beim ersten Start wird nach einem **Datenbankpasswort** gefragt. Ein leeres Passwort deaktiviert die Verschlüsselung. Wer das Passwort nicht jedes Mal eintippen möchte:
 
 ```bash
-MONETA_KEY="meinPasswort" ./run.sh
+MONETA_KEY="meinPasswort" ./scripts/run.sh
 ```
 
 ## Daten
 
-Die Datenbank liegt unter `~/.moneta/data.db`. Bei aktivierter Verschlüsselung ist sie mit AES-256 gesichert — Details in [`documentation/security.md`](documentation/security.md).
+Die Datenbank liegt unter `~/.moneta/data.db`. Bei aktivierter Verschlüsselung ist sie mit AES-256 gesichert — Details in [`docs/security.md`](docs/security.md).
 
 ## Status
 
@@ -71,7 +71,7 @@ Das Projekt ist funktionsfähig, aber noch nicht fertig. Was noch fehlt:
 | Virtuelle Töpfe → Sparziele | Töpfe und Sparziele verknüpfen |
 | Android | App läuft bisher nur auf macOS |
 
-Vollständiger Stand: [`documentation/status.md`](documentation/status.md)
+Vollständiger Stand: [`docs/status.md`](docs/status.md)
 
 ## Technologie
 

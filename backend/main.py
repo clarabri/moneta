@@ -62,7 +62,8 @@ else:
 # ---------------------------------------------------------------------------
 
 app = FastAPI(title="Moneta")
-STATIC = Path(__file__).parent / "static"
+# frontend/ liegt eine Ebene über backend/ im Projektstamm
+STATIC = Path(__file__).parent.parent / "frontend"
 
 init_db()
 

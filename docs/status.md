@@ -19,7 +19,7 @@ MVP-Branch: lokal, macOS, `http://localhost:8000`
 
 | ID | Constraint | Status | Anmerkung |
 |----|------------|--------|-----------|
-| C-1 | Offline-First | ✅ | Alle Kernfunktionen laufen ohne Internet. Alpine.js und Chart.js werden beim Setup lokal in `static/vendor/` abgelegt. |
+| C-1 | Offline-First | ✅ | Alle Kernfunktionen laufen ohne Internet. Alpine.js und Chart.js werden beim Setup lokal in `frontend/vendor/` abgelegt. |
 | C-2 | Kein Bank-Login | ✅ | Keine Banking-Schnittstelle, keine externen API-Aufrufe zur Laufzeit. |
 | C-3 | Lokale Datenhaltung | ✅ | SQLite-Datenbank unter `~/.moneta/data.db`, keine Cloud-Verbindung. |
 | C-4 | Dateneigentum / Portabilität | ✅ | Export und Import aller Daten als JSON über die UI (→ NFR-3). |
@@ -36,7 +36,7 @@ MVP-Branch: lokal, macOS, `http://localhost:8000`
 | FR-D4 | Should | Dublettenerkennung beim Import | ✅ | Beim CSV-Import: Dublettenerkennung über (Konto, Datum, Betrag, Empfänger), konfigurierbar (Checkbox). |
 | FR-D5 | Must | Wiederkehrende Abbuchungen (Intervall: monatlich, vierteljährlich, halbjährlich, jährlich) | ✅ | Vollständig konfigurierbar. Manuelles Buchen per Button; `next_due_date` wird automatisch vorgerückt. |
 | FR-D6 | Must | Transaktionen bearbeiten und löschen; Einnahmen/Ausgaben unterschieden | ✅ | Edit- und Delete-Aktion in der Transaktionsliste. |
-| FR-D7 | Must | Wiederkehrende Einnahmen; höchste Einnahme bestimmt Zyklustart | ✅ | Rekurrente Einnahmen konfigurierbar. Die höchste aktive Einnahme-Regel legt den `day_of_month` des Zyklus fest (`get_cycle_start()` in `main.py`). |
+| FR-D7 | Must | Wiederkehrende Einnahmen; höchste Einnahme bestimmt Zyklustart | ✅ | Rekurrente Einnahmen konfigurierbar. Die höchste aktive Einnahme-Regel legt den `day_of_month` des Zyklus fest (`get_cycle_start()` in `backend/main.py`). |
 | FR-D8 | Should | Anteilige Rücklage pro Fixkosteneintrag (statt voller Buchung) | ❌ | Noch nicht umgesetzt. |
 
 ---
@@ -60,7 +60,7 @@ MVP-Branch: lokal, macOS, `http://localhost:8000`
 | FR-C1 | Must | Zweistufiger Kategorien-Katalog (Übergruppe → Untergruppe) | ✅ | 39 vorausgefüllte Kategorien in 9 Übergruppen (Ausgaben + Einnahmen). |
 | FR-C2 | Must | Über- und Untergruppen frei anlegen, umbenennen, verschieben, löschen | ✅ | Vollständig in der Kategorien-Ansicht (Tabs Ausgaben / Einnahmen). |
 | FR-C3 | Must | Kategorisierung für Ausgaben und Einnahmen | ✅ | Kategorien haben `type=income` oder `type=expense`. |
-| FR-C4 | Must | Regelbasierte Auto-Kategorisierung (Textmuster auf Empfänger/Verwendungszweck) | ✅ | `apply_category_rules()` in `main.py`; 20 Standardregeln vorbefüllt (REWE, EDEKA, Netflix, …). Live-Vorschlag beim Tippen im Transaktions-Modal. |
+| FR-C4 | Must | Regelbasierte Auto-Kategorisierung (Textmuster auf Empfänger/Verwendungszweck) | ✅ | `apply_category_rules()` in `backend/main.py`; 20 Standardregeln vorbefüllt (REWE, EDEKA, Netflix, …). Live-Vorschlag beim Tippen im Transaktions-Modal. |
 | FR-C5 | Must | Manuelle Korrektur hat Vorrang | ✅ | Kategorie im Modal jederzeit überschreibbar; wird direkt gespeichert. |
 | FR-C6 | Should | Lernen aus Korrekturen (Regelvorschlag nach manueller Korrektur) | ❌ | Noch nicht umgesetzt. |
 | FR-C7 | Should | Regeln einsehbar und editierbar | ✅ | Eigene „Auto-Regeln"-Ansicht mit vollem CRUD. |
@@ -94,7 +94,7 @@ MVP-Branch: lokal, macOS, `http://localhost:8000`
 
 | ID | Prio | Anforderung | Status | Anmerkung |
 |----|------|-------------|--------|-----------|
-| FR-T1 | Must | Virtuelle Töpfe innerhalb eines Kontos | ✅ | Tabelle `pots` in `db.py`; volle CRUD-API (`/api/pots`); eigene UI-Ansicht mit Konto-Filter. |
+| FR-T1 | Must | Virtuelle Töpfe innerhalb eines Kontos | ✅ | Tabelle `pots` in `backend/db.py`; volle CRUD-API (`/api/pots`); eigene UI-Ansicht mit Konto-Filter. |
 | FR-T2 | Must | Reservierter Betrag; Summe aller Töpfe vs. Kontosaldo | ✅ | `GET /api/accounts` liefert `pots_reserved` (Summe aller Topf-Zielbeträge) und `free_balance` (Saldo − reserviert). Anzeige in der Töpfe-Ansicht als 3-Kacheln-Summary. |
 | FR-T3 | Should | Anzeige frei verfügbarer Saldo (Kontosaldo − Töpfe) | ✅ | Wird in der Töpfe-Ansicht als „Frei verfügbar"-Kachel angezeigt. |
 | FR-T4 | Should | Sparziel an Topf koppeln | ❌ | Hängt von FR-T1 und FR-S3 ab. |
@@ -106,11 +106,11 @@ MVP-Branch: lokal, macOS, `http://localhost:8000`
 | ID | Prio | Anforderung | Status | Anmerkung |
 |----|------|-------------|--------|-----------|
 | FR-V1 | Must | Prominente Anzeige des verfügbaren Betrags auf dem Startbildschirm | ✅ | Große Zahl oben im Dashboard, grün/rot je nach Vorzeichen. |
-| FR-V2 | Must | Formel: `verfügbar = Einnahmen − Fixkosten − Sparziele − tatsächliche variable Ausgaben` | ✅ | Berechnung in `GET /api/dashboard`; alle Werte stammen aus dem aktuellen Zyklus. |
+| FR-V2 | Must | Formel: `verfügbar = Einnahmen − Fixkosten − Sparziele − tatsächliche variable Ausgaben` | ✅ | Berechnung in `GET /api/dashboard` (`backend/main.py`); alle Werte stammen aus dem aktuellen Zyklus. |
 | FR-V3 | Must | Budgets reduzieren „verfügbar" nur in Höhe der Ist-Ausgaben; Rest wird ausgegraut als „eingeplant" | ✅ | `eingeplant`-Zeile unterhalb der Hauptzahl; wird nicht vom verfügbaren Betrag abgezogen. |
 | FR-V4 | Must | Nicht budgetierte Ausgaben reduzieren „verfügbar" unmittelbar | ✅ | Variable Ausgaben werden vollständig subtrahiert, unabhängig von Budget-Zuweisung. |
 | FR-V5 | Must | Transparente Aufschlüsselung (Einnahmen, Fixkosten, Sparziele, Ausgaben, Eingeplant) | ✅ | Breakdown-Grid direkt unter der Hauptzahl. |
-| FR-V6 | Must | Zyklusbeginn = Eingang der höchsten wiederkehrenden Einnahme; manueller Stichtag als Fallback | ✅ | `get_cycle_start()` in `main.py`; manueller Tag konfigurierbar in der Wiederkehrend-Ansicht → Einstellungen gespeichert in `settings`-Tabelle. |
+| FR-V6 | Must | Zyklusbeginn = Eingang der höchsten wiederkehrenden Einnahme; manueller Stichtag als Fallback | ✅ | `get_cycle_start()` in `backend/main.py`; manueller Tag konfigurierbar in der Wiederkehrend-Ansicht → Einstellungen gespeichert in `settings`-Tabelle. |
 
 ---
 
@@ -131,7 +131,7 @@ MVP-Branch: lokal, macOS, `http://localhost:8000`
 | ID | Prio | Anforderung | Status | Anmerkung |
 |----|------|-------------|--------|-----------|
 | NFR-1 | Must | Kein Tracking, keine Telemetrie | ✅ | Keine externen Verbindungen zur Laufzeit. |
-| NFR-2 | Must | Verschlüsselung at rest (mind. optional) | ✅ | SQLCipher 4 (AES-256-CBC, PBKDF2-HMAC-SHA512 mit 256.000 Iterationen). Passwort per Terminal-Prompt oder `MONETA_KEY`-Umgebungsvariable; liegt nur im RAM. Migration bestehender Datenbanken automatisch via `PRAGMA rekey`. Details → `documentation/security.md`. |
+| NFR-2 | Must | Verschlüsselung at rest (mind. optional) | ✅ | SQLCipher 4 (AES-256-CBC, PBKDF2-HMAC-SHA512 mit 256.000 Iterationen). Passwort per Terminal-Prompt oder `MONETA_KEY`-Umgebungsvariable; liegt nur im RAM. Migration bestehender Datenbanken automatisch via `PRAGMA rekey`. Details → `docs/security.md`. |
 | NFR-3 | Must | Export & Import (JSON oder SQLite + CSV) | ✅ | JSON-Export und -Import vollständig über die UI; enthält alle Entitäten. |
 | NFR-4 | Must | macOS (Desktop) + Android (GrapheneOS), offline | ⚠️ | macOS: ✅ läuft als lokaler Webserver. Android: ❌ noch nicht adressiert; Technologiewahl für Cross-Platform offen. |
 | NFR-5 | Should | Performance bei ≥ mehreren tausend Transaktionen | ⚠️ | SQLite mit WAL-Modus; keine Indizes auf `date`/`account_id` gesetzt. Pagination über `limit`/`offset` vorhanden, aber im UI noch nicht genutzt. |

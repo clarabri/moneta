@@ -1,13 +1,16 @@
 #!/bin/bash
 set -e
 
+# Immer vom Projektstamm aus arbeiten, egal aus welchem Verzeichnis das Skript aufgerufen wird
+cd "$(dirname "${BASH_SOURCE[0]}")/.."
+
 echo "🏦 Moneta — Setup"
 echo "================="
 
 # SQLCipher (Datenbank-Verschlüsselung, NFR-2)
 if ! command -v brew &>/dev/null; then
   echo "⚠️  Homebrew nicht gefunden — SQLCipher-Verschlüsselung wird übersprungen."
-  echo "   Für Verschlüsselung: https://brew.sh installieren, dann ./setup.sh erneut ausführen."
+  echo "   Für Verschlüsselung: https://brew.sh installieren, dann ./scripts/setup.sh erneut ausführen."
 else
   if ! brew list sqlcipher &>/dev/null; then
     echo "→ Installiere SQLCipher (Datenbank-Verschlüsselung) …"
@@ -26,8 +29,8 @@ fi
 echo "→ Installiere Python-Abhängigkeiten …"
 .venv/bin/pip install -q -r requirements.txt
 
-# Download JS vendor files (einmalig)
-VENDOR="static/vendor"
+# JS-Vendor-Dateien einmalig herunterladen (lokal gespeichert, kein CDN zur Laufzeit)
+VENDOR="frontend/vendor"
 mkdir -p "$VENDOR"
 
 if [ ! -f "$VENDOR/alpine.min.js" ]; then
@@ -42,4 +45,4 @@ fi
 
 echo ""
 echo "✅ Setup abgeschlossen! Starte die App mit:"
-echo "   ./run.sh"
+echo "   ./scripts/run.sh"
