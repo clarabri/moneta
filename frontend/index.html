@@ -168,7 +168,7 @@
           <table class="data-table" x-show="dash && dash.recent_transactions.length > 0">
             <thead>
               <tr>
-                <th>Datum</th><th>Empfänger / Verwendung</th><th>Kategorie</th><th style="text-align:right">Betrag</th>
+                <th>Datum</th><th>Auftraggeber / Empfänger</th><th>Kategorie</th><th style="text-align:right">Betrag</th>
               </tr>
             </thead>
             <tbody>
@@ -177,7 +177,7 @@
                   <td class="text-muted text-sm" x-text="fmtDate(tx.date)"></td>
                   <td>
                     <div class="tx-payee" x-text="tx.payee || tx.purpose || '–'"></div>
-                    <div class="tx-meta" x-text="tx.payee && tx.purpose ? tx.purpose : ''"></div>
+                    <div class="tx-meta" x-show="tx.purpose" x-text="tx.purpose"></div>
                   </td>
                   <td>
                     <span class="badge" x-show="tx.category_name">
@@ -240,7 +240,7 @@
             <thead>
               <tr>
                 <th>Datum</th>
-                <th>Empfänger / Verwendung</th>
+                <th>Auftraggeber / Empfänger</th>
                 <th>Konto</th>
                 <th>Kategorie</th>
                 <th style="text-align:right">Betrag</th>
@@ -253,7 +253,7 @@
                   <td class="text-muted text-sm" x-text="fmtDate(tx.date)"></td>
                   <td>
                     <div class="tx-payee" x-text="tx.payee || tx.purpose || '–'"></div>
-                    <div class="tx-meta" x-text="tx.payee && tx.purpose ? tx.purpose : ''"></div>
+                    <div class="tx-meta" x-show="tx.purpose" x-text="tx.purpose"></div>
                     <span class="recurring-badge" x-show="tx.recurring_rule_id">wiederkehrend</span>
                   </td>
                   <td class="text-muted text-sm" x-text="accountName(tx.account_id)"></td>
@@ -698,7 +698,7 @@
                   </select>
                 </div>
                 <div class="form-group">
-                  <label class="form-label">Spalte: Empfänger</label>
+                  <label class="form-label">Spalte: Auftraggeber / Empfänger</label>
                   <select class="form-select" x-model="csvConfig.col_payee">
                     <option value="">— nicht zugeordnet —</option>
                     <template x-for="h in csvHeaders" :key="h"><option :value="h" x-text="h"></option></template>
@@ -714,7 +714,8 @@
                 <div class="form-group">
                   <label class="form-label">Typ-Bestimmung</label>
                   <select class="form-select" x-model="csvConfig.default_type">
-                    <option value="auto">Vorzeichen des Betrags (negativ = Ausgabe)</option>
+                    <option value="auto">Vorzeichen: negativ = Ausgabe, positiv = Einnahme</option>
+                    <option value="auto_reversed">Vorzeichen umgekehrt: positiv = Ausgabe</option>
                     <option value="expense">Alle als Ausgabe</option>
                     <option value="income">Alle als Einnahme</option>
                   </select>
@@ -827,7 +828,7 @@
       </div>
       <div class="form-row">
         <div class="form-group">
-          <label class="form-label">Empfänger / Auftraggeber</label>
+          <label class="form-label">Auftraggeber / Empfänger</label>
           <input class="form-input" type="text" placeholder="z. B. REWE" x-model="txForm.payee"
                  @input.debounce="suggestCategory()">
         </div>
@@ -895,8 +896,13 @@
         </div>
       </div>
       <div class="form-group">
-        <label class="form-label">Startsaldo (€)</label>
+        <label class="form-label">Aktueller Kontostand (€)</label>
         <input class="form-input" type="number" step="0.01" placeholder="0,00" x-model="accForm.initial_balance">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Kontostand gilt ab (optional)</label>
+        <input class="form-input" type="date" x-model="accForm.balance_date">
+        <div class="text-muted text-sm" style="margin-top:4px">Transaktionen vor diesem Datum werden nicht vom Kontostand abgezogen. Leer lassen wenn alle Transaktionen zählen sollen.</div>
       </div>
     </div>
     <div class="modal-footer">
@@ -1013,7 +1019,7 @@
       </div>
       <div class="form-row">
         <div class="form-group">
-          <label class="form-label">Empfänger</label>
+          <label class="form-label">Auftraggeber / Empfänger</label>
           <input class="form-input" type="text" x-model="recurringForm.payee">
         </div>
         <div class="form-group">

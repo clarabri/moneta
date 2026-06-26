@@ -102,6 +102,7 @@ CREATE TABLE IF NOT EXISTS accounts (
     type TEXT NOT NULL,
     initial_balance REAL NOT NULL DEFAULT 0.0,
     currency TEXT NOT NULL DEFAULT 'EUR',
+    balance_date TEXT,
     created_at TEXT NOT NULL
 );
 
@@ -264,6 +265,13 @@ def init_db():
     conn = get_db()
     conn.executescript(SCHEMA)
     conn.commit()
+
+    # Migration: balance_date für bestehende Datenbanken ohne diese Spalte
+    try:
+        conn.execute("ALTER TABLE accounts ADD COLUMN balance_date TEXT")
+        conn.commit()
+    except Exception:
+        pass  # Spalte existiert bereits
 
     count = conn.execute("SELECT COUNT(*) FROM categories").fetchone()[0]
     if count == 0:

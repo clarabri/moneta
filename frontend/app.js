@@ -139,7 +139,7 @@ function app() {
     },
 
     openAccountModal(acc) {
-      this.accForm = acc ? { ...acc } : { name: '', type: 'checking', initial_balance: 0, currency: 'EUR' };
+      this.accForm = acc ? { ...acc } : { name: '', type: 'checking', initial_balance: 0, currency: 'EUR', balance_date: '' };
       this.modals.account = true;
     },
 
@@ -576,6 +576,7 @@ function app() {
       if (!this.csvConfig.col_amount)  this.csvConfig.col_amount  = tryMatch(['betrag', 'amount', 'umsatz', 'wert']);
       if (!this.csvConfig.col_payee)   this.csvConfig.col_payee   = tryMatch(['empfänger', 'auftraggeber', 'name', 'payee', 'beguenstigter']);
       if (!this.csvConfig.col_purpose) this.csvConfig.col_purpose = tryMatch(['verwendungszweck', 'purpose', 'betreff', 'text', 'buchungstext']);
+      if (!this.csvConfig.col_type)    this.csvConfig.col_type    = tryMatch(['buchungsart', 'umsatzart', 'art', 'typ', 'soll/haben', 'haben/soll']);
     },
 
     async importCsv() {

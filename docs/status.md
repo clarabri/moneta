@@ -1,6 +1,6 @@
 # Moneta — Implementierungsstand
 
-Stand: 2026-06-26  
+Stand: 2026-06-26 (aktualisiert nach Session 2)
 MVP-Branch: lokal, macOS, `http://localhost:8000`
 
 ---
@@ -30,10 +30,10 @@ MVP-Branch: lokal, macOS, `http://localhost:8000`
 
 | ID | Prio | Anforderung | Status | Anmerkung |
 |----|------|-------------|--------|-----------|
-| FR-D1 | Must | Manuelle Erfassung (Betrag, Datum, Konto, Kategorie, Empfänger, Verwendungszweck, Notiz) | ✅ | Vollständig im Transaktions-Modal. |
-| FR-D2 | Must | CSV-Import mit konfigurierbarem Spalten-Mapping | ✅ | Export/Import-Ansicht. Upload → Spalten-Mapping (Datum, Betrag, Empfänger, Verwendungszweck, Typ) → Import. Deutsche/englische Zahlen- und Datumsformate konfigurierbar. Auto-Kategorisierung greift auch beim Import. |
+| FR-D1 | Must | Manuelle Erfassung (Betrag, Datum, Konto, Kategorie, Auftraggeber/Empfänger, Verwendungszweck, Notiz) | ✅ | Vollständig im Transaktions-Modal. Feld heißt „Auftraggeber / Empfänger" (für Einnahmen = Sender, für Ausgaben = Empfänger). Verwendungszweck wird in der Übersicht immer angezeigt, auch ohne gesetzten Auftraggeber/Empfänger. |
+| FR-D2 | Must | CSV-Import mit konfigurierbarem Spalten-Mapping | ✅ | Export/Import-Ansicht. Upload → Spalten-Mapping (Datum, Betrag, Auftraggeber/Empfänger, Verwendungszweck, Typ) → Import. Datumsformate: TT.MM.JJJJ, **TT.MM.JJ**, JJJJ-MM-TT, TT/MM/JJJJ. Typ-Erkennung: Vorzeichen (auto), umgekehrtes Vorzeichen (auto_reversed), Typ-Spalte mit Substring-Matching (erkennt „SEPA-Gutschrift", „Lohn-Gutschrift" etc.). Typ-Spalte wird automatisch erkannt wenn Spaltenname „Buchungsart", „Umsatzart", „Typ", „Soll/Haben" o.ä. |
 | FR-D3 | Should | Import CAMT.053 und MT940 | ❌ | Noch nicht umgesetzt. |
-| FR-D4 | Should | Dublettenerkennung beim Import | ✅ | Beim CSV-Import: Dublettenerkennung über (Konto, Datum, Betrag, Empfänger), konfigurierbar (Checkbox). |
+| FR-D4 | Should | Dublettenerkennung beim Import | ✅ | Beim CSV-Import: Dublettenerkennung über (Konto, Datum, Betrag, Auftraggeber/Empfänger). Standardmäßig aktiv (`skip_duplicates=True`); dieselbe CSV kann mehrfach importiert werden ohne doppelte Einträge. |
 | FR-D5 | Must | Wiederkehrende Abbuchungen (Intervall: monatlich, vierteljährlich, halbjährlich, jährlich) | ✅ | Vollständig konfigurierbar. Manuelles Buchen per Button; `next_due_date` wird automatisch vorgerückt. |
 | FR-D6 | Must | Transaktionen bearbeiten und löschen; Einnahmen/Ausgaben unterschieden | ✅ | Edit- und Delete-Aktion in der Transaktionsliste. |
 | FR-D7 | Must | Wiederkehrende Einnahmen; höchste Einnahme bestimmt Zyklustart | ✅ | Rekurrente Einnahmen konfigurierbar. Die höchste aktive Einnahme-Regel legt den `day_of_month` des Zyklus fest (`get_cycle_start()` in `backend/main.py`). |
@@ -46,8 +46,8 @@ MVP-Branch: lokal, macOS, `http://localhost:8000`
 | ID | Prio | Anforderung | Status | Anmerkung |
 |----|------|-------------|--------|-----------|
 | FR-K1 | Must | Mehrere Konten anlegen, bearbeiten, löschen | ✅ | Vollständig in der Konten-Ansicht. |
-| FR-K2 | Must | Konto-Typ (Girokonto, Sparkonto, Bargeld, Kreditkarte) und aktueller Saldo | ✅ | Typ als Enum; Saldo = Startsaldo + Transaktionen. |
-| FR-K3 | Must | Saldo pro Konto aus Startsaldo + Transaktionen | ✅ | Berechnung in `GET /api/accounts`. |
+| FR-K2 | Must | Konto-Typ (Girokonto, Sparkonto, Bargeld, Kreditkarte) und aktueller Saldo | ✅ | Typ als Enum; Saldo = Kontostand + Transaktionen ab optionalem Startdatum. |
+| FR-K3 | Must | Saldo pro Konto aus Startsaldo + Transaktionen | ✅ | Berechnung in `GET /api/accounts`. Neu: optionales `balance_date` — nur Transaktionen ab diesem Datum fließen in den Saldo ein. Ermöglicht: aktuellen Kontostand eintragen, ältere importierte Transaktionen für Analyse behalten ohne Doppelzählung. |
 | FR-K4 | Must | Gesamtübersicht aller Konten (Summe des Vermögens) | ✅ | Im Dashboard (Kacheln + Gesamtvermögen-Karte) und in der Konten-Tabelle. |
 | FR-K5 | Should | Umbuchungen verändern keinen Gesamtsaldo | ✅ | Typ `transfer` wird beim Saldo beidseitig berücksichtigt (Abgang + Zugang); taucht nicht als Ausgabe in Analysen auf. |
 

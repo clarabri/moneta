@@ -164,6 +164,7 @@ class AccountIn(BaseModel):
     type: str
     initial_balance: float = 0.0
     currency: str = "EUR"
+    balance_date: Optional[str] = None
 
 
 class TransactionIn(BaseModel):
@@ -263,6 +264,9 @@ def list_accounts():
     with get_db() as conn:
         accounts = rows_to_list(conn.execute("SELECT * FROM accounts ORDER BY name").fetchall())
         for acc in accounts:
+            # balance_date: wenn gesetzt, zählen nur Transaktionen ab diesem Datum.
+            # Ohne Datum: '0000-00-00' ist kleiner als jedes ISO-Datum → alle zählen.
+            balance_from = acc.get("balance_date") or "0000-00-00"
             balance = conn.execute(
                 """SELECT COALESCE(SUM(
                     CASE
@@ -272,8 +276,9 @@ def list_accounts():
                         WHEN type='transfer' AND transfer_to_account_id=? THEN amount
                         ELSE 0
                     END
-                ), 0) FROM transactions WHERE account_id=? OR transfer_to_account_id=?""",
-                (acc["id"], acc["id"], acc["id"], acc["id"]),
+                ), 0) FROM transactions
+                WHERE (account_id=? OR transfer_to_account_id=?) AND date >= ?""",
+                (acc["id"], acc["id"], acc["id"], acc["id"], balance_from),
             ).fetchone()[0]
             acc["balance"] = round(acc["initial_balance"] + balance, 2)
             # Sum of all pot target_amounts for this account
@@ -291,8 +296,8 @@ def create_account(data: AccountIn):
     with get_db() as conn:
         acc_id = uid()
         conn.execute(
-            "INSERT INTO accounts (id, name, type, initial_balance, currency, created_at) VALUES (?,?,?,?,?,?)",
-            (acc_id, data.name, data.type, data.initial_balance, data.currency, now_iso()),
+            "INSERT INTO accounts (id, name, type, initial_balance, currency, balance_date, created_at) VALUES (?,?,?,?,?,?,?)",
+            (acc_id, data.name, data.type, data.initial_balance, data.currency, data.balance_date, now_iso()),
         )
         conn.commit()
         return {"id": acc_id}
@@ -302,8 +307,8 @@ def create_account(data: AccountIn):
 def update_account(acc_id: str, data: AccountIn):
     with get_db() as conn:
         conn.execute(
-            "UPDATE accounts SET name=?, type=?, initial_balance=?, currency=? WHERE id=?",
-            (data.name, data.type, data.initial_balance, data.currency, acc_id),
+            "UPDATE accounts SET name=?, type=?, initial_balance=?, currency=?, balance_date=? WHERE id=?",
+            (data.name, data.type, data.initial_balance, data.currency, data.balance_date, acc_id),
         )
         conn.commit()
         return {"ok": True}
@@ -980,16 +985,22 @@ def import_csv(data: CsvImportIn):
                 parsed_date = datetime.strptime(raw_date, data.date_format).date().isoformat()
                 amount = _parse_csv_amount(raw_amount, data.decimal_sep)
 
-                # Determine transaction type
+                # Typ bestimmen: Einnahme oder Ausgabe?
                 if idx_type is not None:
+                    # Typ-Spalte vorhanden → Schlüsselwörter per Substring suchen
+                    # (damit "SEPA-Gutschrift" oder "Lohn-Gutschrift" auch erkannt wird)
                     raw_type = cell(row, idx_type).lower()
-                    if raw_type in ("einnahme", "income", "gutschrift", "haben", "credit", "+"):
-                        tx_type = "income"
-                    else:
-                        tx_type = "expense"
+                    income_kw = ("gutschrift", "einnahme", "income", "haben", "credit",
+                                 "eingang", "zugang", "gutbuchung", "lohn", "gehalt", "+")
+                    tx_type = "income" if any(kw in raw_type for kw in income_kw) else "expense"
                     amount = abs(amount)
                 elif data.default_type == "auto":
+                    # Vorzeichen entscheidet: negativ = Ausgabe, positiv = Einnahme
                     tx_type = "income" if amount >= 0 else "expense"
+                    amount = abs(amount)
+                elif data.default_type == "auto_reversed":
+                    # Umgekehrtes Vorzeichen (manche Banken: positiv = Ausgabe)
+                    tx_type = "expense" if amount >= 0 else "income"
                     amount = abs(amount)
                 else:
                     tx_type = data.default_type
