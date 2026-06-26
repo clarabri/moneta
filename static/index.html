@@ -1,0 +1,1193 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Moneta</title>
+  <link rel="stylesheet" href="/static/style.css">
+  <script src="/static/vendor/alpine.min.js" defer></script>
+  <script src="/static/vendor/chart.min.js"></script>
+</head>
+<body x-data="app()" x-cloak>
+
+<!-- Sidebar -->
+<div id="sidebar">
+  <div class="sidebar-logo">
+    <span>💳</span> Moneta
+  </div>
+  <nav class="sidebar-nav">
+    <div class="nav-section">Übersicht</div>
+    <div class="nav-item" :class="{active: view==='dashboard'}" @click="setView('dashboard')">
+      <span class="nav-icon">🏠</span> Dashboard
+    </div>
+    <div class="nav-item" :class="{active: view==='transactions'}" @click="setView('transactions')">
+      <span class="nav-icon">📋</span> Transaktionen
+    </div>
+    <div class="nav-section">Verwaltung</div>
+    <div class="nav-item" :class="{active: view==='accounts'}" @click="setView('accounts')">
+      <span class="nav-icon">🏦</span> Konten
+    </div>
+    <div class="nav-item" :class="{active: view==='categories'}" @click="setView('categories')">
+      <span class="nav-icon">🏷️</span> Kategorien
+    </div>
+    <div class="nav-item" :class="{active: view==='recurring'}" @click="setView('recurring')">
+      <span class="nav-icon">🔄</span> Wiederkehrend
+    </div>
+    <div class="nav-item" :class="{active: view==='rules'}" @click="setView('rules')">
+      <span class="nav-icon">⚙️</span> Auto-Regeln
+    </div>
+    <div class="nav-section">Planung</div>
+    <div class="nav-item" :class="{active: view==='budgets'}" @click="setView('budgets')">
+      <span class="nav-icon">📊</span> Budgets
+    </div>
+    <div class="nav-item" :class="{active: view==='goals'}" @click="setView('goals')">
+      <span class="nav-icon">🎯</span> Sparziele
+    </div>
+    <div class="nav-item" :class="{active: view==='pots'}" @click="setView('pots')">
+      <span class="nav-icon">🪣</span> Töpfe
+    </div>
+    <div class="nav-section">Daten</div>
+    <div class="nav-item" :class="{active: view==='export'}" @click="setView('export')">
+      <span class="nav-icon">💾</span> Export / Import
+    </div>
+  </nav>
+</div>
+
+<!-- Main -->
+<div id="main">
+  <div class="topbar">
+    <h1 x-text="viewTitle()"></h1>
+    <div class="flex gap-8 items-center">
+      <template x-if="view==='transactions'">
+        <button class="btn btn-primary" @click="openTxModal()">+ Transaktion</button>
+      </template>
+      <template x-if="view==='accounts'">
+        <button class="btn btn-primary" @click="openAccountModal()">+ Konto</button>
+      </template>
+      <template x-if="view==='categories'">
+        <button class="btn btn-primary" @click="openCategoryModal()">+ Kategorie</button>
+      </template>
+      <template x-if="view==='recurring'">
+        <button class="btn btn-primary" @click="openRecurringModal()">+ Eintrag</button>
+      </template>
+      <template x-if="view==='rules'">
+        <button class="btn btn-primary" @click="openRuleModal()">+ Regel</button>
+      </template>
+      <template x-if="view==='budgets'">
+        <button class="btn btn-primary" @click="openBudgetModal()">+ Budget</button>
+      </template>
+      <template x-if="view==='goals'">
+        <button class="btn btn-primary" @click="openGoalModal()">+ Sparziel</button>
+      </template>
+      <template x-if="view==='pots'">
+        <button class="btn btn-primary" @click="openPotModal()">+ Topf</button>
+      </template>
+    </div>
+  </div>
+
+  <div class="page-content">
+
+    <!-- ════════════ DASHBOARD ════════════ -->
+    <template x-if="view==='dashboard'">
+      <div>
+        <!-- Available amount -->
+        <div class="big-number-card mb-16" x-show="dash">
+          <div class="big-number-label">Verfügbar im aktuellen Zyklus</div>
+          <div class="big-number" :class="dash && dash.available >= 0 ? 'positive' : 'negative'"
+               x-text="dash ? eur(dash.available) : '…'"></div>
+          <div class="cycle-info" x-text="dash ? `Zyklus seit ${fmtDate(dash.cycle_start)} · Heute: ${fmtDate(dash.today)}` : ''"></div>
+          <div class="breakdown-grid" x-show="dash">
+            <div class="breakdown-item">
+              <div class="breakdown-label">Einnahmen</div>
+              <div class="breakdown-value income" x-text="dash ? eur(dash.income) : ''"></div>
+            </div>
+            <div class="breakdown-item">
+              <div class="breakdown-label">Fixkosten</div>
+              <div class="breakdown-value expense" x-text="dash ? '−' + eur(dash.fixed_expenses) : ''"></div>
+            </div>
+            <div class="breakdown-item">
+              <div class="breakdown-label">Variable Ausgaben</div>
+              <div class="breakdown-value expense" x-text="dash ? '−' + eur(dash.variable_expenses) : ''"></div>
+            </div>
+            <div class="breakdown-item">
+              <div class="breakdown-label">Sparziele</div>
+              <div class="breakdown-value savings" x-text="dash ? '−' + eur(dash.savings_monthly) : ''"></div>
+            </div>
+          </div>
+          <template x-if="dash && dash.eingeplant > 0">
+            <div class="mt-8 text-sm text-muted">
+              + <span x-text="eur(dash.eingeplant)"></span> <span style="color:var(--text-dim)">eingeplant (Budgets, noch nicht ausgegeben)</span>
+            </div>
+          </template>
+        </div>
+
+        <!-- Stats row -->
+        <div class="three-col" x-show="dash">
+          <div class="stat-card">
+            <div class="stat-label">Gesamtvermögen</div>
+            <div class="stat-value" x-text="dash ? eur(dash.total_assets) : '…'"></div>
+            <div class="stat-sub" x-text="dash ? `Über ${dash.account_count} Konto(en)` : ''"></div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Ausgaben im Zyklus</div>
+            <div class="stat-value text-red" x-text="dash ? eur(dash.total_expenses) : '…'"></div>
+          </div>
+          <div class="stat-card">
+            <div class="stat-label">Einnahmen im Zyklus</div>
+            <div class="stat-value text-green" x-text="dash ? eur(dash.income) : '…'"></div>
+          </div>
+        </div>
+
+        <!-- Accounts row -->
+        <div class="mb-16">
+          <div class="card-title">Konten</div>
+          <div class="account-chips">
+            <template x-for="acc in accounts" :key="acc.id">
+              <div class="account-chip">
+                <div class="account-chip-name" x-text="acc.name"></div>
+                <div class="account-chip-type" x-text="accTypeLabel(acc.type)"></div>
+                <div class="account-chip-balance" :class="acc.balance >= 0 ? 'pos' : 'neg'" x-text="eur(acc.balance)"></div>
+              </div>
+            </template>
+            <template x-if="accounts.length === 0">
+              <div class="text-muted text-sm">Noch keine Konten angelegt.</div>
+            </template>
+          </div>
+        </div>
+
+        <!-- Recent transactions -->
+        <div class="card">
+          <div class="card-title">Letzte Transaktionen</div>
+          <template x-if="dash && dash.recent_transactions.length === 0">
+            <div class="empty">
+              <div class="empty-icon">📭</div>
+              <div class="empty-text">Noch keine Transaktionen</div>
+              <div class="empty-sub">Gehe zu Transaktionen und füge die erste Buchung hinzu.</div>
+            </div>
+          </template>
+          <table class="data-table" x-show="dash && dash.recent_transactions.length > 0">
+            <thead>
+              <tr>
+                <th>Datum</th><th>Empfänger / Verwendung</th><th>Kategorie</th><th style="text-align:right">Betrag</th>
+              </tr>
+            </thead>
+            <tbody>
+              <template x-for="tx in (dash ? dash.recent_transactions : [])" :key="tx.id">
+                <tr>
+                  <td class="text-muted text-sm" x-text="fmtDate(tx.date)"></td>
+                  <td>
+                    <div class="tx-payee" x-text="tx.payee || tx.purpose || '–'"></div>
+                    <div class="tx-meta" x-text="tx.payee && tx.purpose ? tx.purpose : ''"></div>
+                  </td>
+                  <td>
+                    <span class="badge" x-show="tx.category_name">
+                      <span x-text="tx.category_icon || '📁'"></span>
+                      <span x-text="tx.category_name"></span>
+                    </span>
+                  </td>
+                  <td style="text-align:right">
+                    <span class="tx-amount" :class="tx.type" x-text="(tx.type==='income' ? '+' : tx.type==='expense' ? '−' : '') + eur(tx.amount)"></span>
+                  </td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+          <div class="mt-12" x-show="dash && dash.recent_transactions.length > 0">
+            <button class="btn btn-ghost btn-sm" @click="setView('transactions')">Alle anzeigen →</button>
+          </div>
+        </div>
+      </div>
+    </template>
+
+    <!-- ════════════ TRANSACTIONS ════════════ -->
+    <template x-if="view==='transactions'">
+      <div>
+        <!-- Filter bar -->
+        <div class="card mb-16">
+          <div class="flex gap-8 items-center" style="flex-wrap:wrap">
+            <input class="form-input" style="max-width:130px" type="date" x-model="txFilter.start">
+            <span class="text-muted">–</span>
+            <input class="form-input" style="max-width:130px" type="date" x-model="txFilter.end">
+            <select class="form-select" style="max-width:160px" x-model="txFilter.account_id">
+              <option value="">Alle Konten</option>
+              <template x-for="acc in accounts" :key="acc.id">
+                <option :value="acc.id" x-text="acc.name"></option>
+              </template>
+            </select>
+            <select class="form-select" style="max-width:180px" x-model="txFilter.category_id">
+              <option value="">Alle Kategorien</option>
+              <template x-for="cat in categories.filter(c=>!c.parent_id)" :key="cat.id">
+                <option :value="cat.id" x-text="cat.icon + ' ' + cat.name" disabled style="font-weight:600"></option>
+                <template x-for="sub in categories.filter(c=>c.parent_id===cat.id)" :key="sub.id">
+                  <option :value="sub.id" x-text="'  ' + sub.icon + ' ' + sub.name"></option>
+                </template>
+              </template>
+            </select>
+            <button class="btn btn-secondary btn-sm" @click="loadTransactions()">Filter anwenden</button>
+            <button class="btn btn-ghost btn-sm" @click="resetTxFilter()">Zurücksetzen</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <template x-if="transactions.length === 0">
+            <div class="empty">
+              <div class="empty-icon">📭</div>
+              <div class="empty-text">Keine Transaktionen</div>
+              <div class="empty-sub">Klicke auf „+ Transaktion" um die erste Buchung hinzuzufügen.</div>
+            </div>
+          </template>
+          <table class="data-table" x-show="transactions.length > 0">
+            <thead>
+              <tr>
+                <th>Datum</th>
+                <th>Empfänger / Verwendung</th>
+                <th>Konto</th>
+                <th>Kategorie</th>
+                <th style="text-align:right">Betrag</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              <template x-for="tx in transactions" :key="tx.id">
+                <tr>
+                  <td class="text-muted text-sm" x-text="fmtDate(tx.date)"></td>
+                  <td>
+                    <div class="tx-payee" x-text="tx.payee || tx.purpose || '–'"></div>
+                    <div class="tx-meta" x-text="tx.payee && tx.purpose ? tx.purpose : ''"></div>
+                    <span class="recurring-badge" x-show="tx.recurring_rule_id">wiederkehrend</span>
+                  </td>
+                  <td class="text-muted text-sm" x-text="accountName(tx.account_id)"></td>
+                  <td>
+                    <span class="badge" x-show="tx.category_name">
+                      <span x-text="tx.category_icon || '📁'"></span>
+                      <span x-text="tx.category_name"></span>
+                    </span>
+                  </td>
+                  <td style="text-align:right">
+                    <span class="tx-amount" :class="tx.type"
+                          x-text="(tx.type==='income' ? '+' : tx.type==='expense' ? '−' : '⇄') + eur(tx.amount)"></span>
+                  </td>
+                  <td style="text-align:right;white-space:nowrap">
+                    <button class="btn btn-ghost btn-icon" @click="editTx(tx)" title="Bearbeiten">✏️</button>
+                    <button class="btn btn-ghost btn-icon" @click="deleteTx(tx.id)" title="Löschen">🗑️</button>
+                  </td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </template>
+
+    <!-- ════════════ ACCOUNTS ════════════ -->
+    <template x-if="view==='accounts'">
+      <div>
+        <template x-if="accounts.length === 0">
+          <div class="card"><div class="empty">
+            <div class="empty-icon">🏦</div>
+            <div class="empty-text">Noch keine Konten</div>
+            <div class="empty-sub">Füge dein erstes Konto hinzu.</div>
+          </div></div>
+        </template>
+        <div class="card" x-show="accounts.length > 0">
+          <table class="data-table">
+            <thead>
+              <tr><th>Name</th><th>Typ</th><th>Währung</th><th style="text-align:right">Startsaldo</th><th style="text-align:right">Aktueller Saldo</th><th></th></tr>
+            </thead>
+            <tbody>
+              <template x-for="acc in accounts" :key="acc.id">
+                <tr>
+                  <td class="fw-600" x-text="acc.name"></td>
+                  <td class="text-muted" x-text="accTypeLabel(acc.type)"></td>
+                  <td class="text-muted" x-text="acc.currency"></td>
+                  <td style="text-align:right" class="text-muted" x-text="eur(acc.initial_balance)"></td>
+                  <td style="text-align:right">
+                    <span class="fw-600" :class="acc.balance >= 0 ? 'text-green' : 'text-red'" x-text="eur(acc.balance)"></span>
+                  </td>
+                  <td style="text-align:right">
+                    <button class="btn btn-ghost btn-icon" @click="editAccount(acc)">✏️</button>
+                    <button class="btn btn-ghost btn-icon" @click="deleteAccount(acc.id)">🗑️</button>
+                  </td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+          <div class="mt-12 text-sm" style="border-top:1px solid var(--border);padding-top:12px">
+            Gesamtvermögen: <span class="fw-600 text-green" x-text="eur(accounts.reduce((s,a) => s + a.balance, 0))"></span>
+          </div>
+        </div>
+      </div>
+    </template>
+
+    <!-- ════════════ CATEGORIES ════════════ -->
+    <template x-if="view==='categories'">
+      <div>
+        <div class="tabs mb-16">
+          <div class="tab" :class="{active: catTab==='expense'}" @click="catTab='expense'">Ausgaben</div>
+          <div class="tab" :class="{active: catTab==='income'}" @click="catTab='income'">Einnahmen</div>
+        </div>
+        <div class="two-col">
+          <!-- Parents -->
+          <div class="card">
+            <div class="card-title">Übergruppen</div>
+            <template x-for="cat in categories.filter(c => c.type===catTab && !c.parent_id)" :key="cat.id">
+              <div class="cat-parent" :class="{selected: selectedParent===cat.id}" @click="selectedParent=cat.id">
+                <span x-text="cat.icon"></span>
+                <span x-text="cat.name" style="flex:1"></span>
+                <button class="btn btn-ghost btn-icon btn-sm" @click.stop="editCategory(cat)">✏️</button>
+                <button class="btn btn-ghost btn-icon btn-sm" @click.stop="deleteCategory(cat.id)">🗑️</button>
+              </div>
+            </template>
+            <button class="btn btn-ghost btn-sm mt-8" @click="openCategoryModal(null, catTab)">+ Übergruppe</button>
+          </div>
+          <!-- Children -->
+          <div class="card">
+            <div class="card-title">
+              Untergruppen
+              <span x-show="selectedParent" class="text-muted text-sm" x-text="' von ' + (categories.find(c=>c.id===selectedParent)?.name || '')"></span>
+            </div>
+            <template x-if="!selectedParent">
+              <div class="text-muted text-sm">Wähle eine Übergruppe aus.</div>
+            </template>
+            <template x-if="selectedParent">
+              <div>
+                <template x-for="cat in categories.filter(c => c.type===catTab && c.parent_id===selectedParent)" :key="cat.id">
+                  <div class="cat-child">
+                    <span x-text="cat.icon"></span>
+                    <span x-text="cat.name" style="flex:1"></span>
+                    <button class="btn btn-ghost btn-icon btn-sm" @click="editCategory(cat)">✏️</button>
+                    <button class="btn btn-ghost btn-icon btn-sm" @click="deleteCategory(cat.id)">🗑️</button>
+                  </div>
+                </template>
+                <button class="btn btn-ghost btn-sm mt-8" @click="openCategoryModal(selectedParent, catTab)">+ Untergruppe</button>
+              </div>
+            </template>
+          </div>
+        </div>
+      </div>
+    </template>
+
+    <!-- ════════════ RECURRING ════════════ -->
+    <template x-if="view==='recurring'">
+      <div>
+        <div class="two-col">
+          <!-- Einnahmen -->
+          <div class="card">
+            <div class="card-title" style="color:var(--green)">Wiederkehrende Einnahmen</div>
+            <template x-if="recurringRules.filter(r=>r.type==='income').length===0">
+              <div class="text-muted text-sm">Noch keine Einnahmen konfiguriert.</div>
+            </template>
+            <table class="data-table" x-show="recurringRules.filter(r=>r.type==='income').length>0">
+              <thead><tr><th>Name</th><th>Betrag</th><th>Intervall</th><th>Nächste Fälligkeit</th><th></th></tr></thead>
+              <tbody>
+                <template x-for="r in recurringRules.filter(r=>r.type==='income')" :key="r.id">
+                  <tr>
+                    <td>
+                      <div class="fw-600" x-text="r.name"></div>
+                      <div class="text-xs text-muted" x-text="r.category_name ? r.category_icon + ' ' + r.category_name : ''"></div>
+                    </td>
+                    <td class="text-green fw-600" x-text="eur(r.amount)"></td>
+                    <td class="text-muted text-sm" x-text="intervalLabel(r.interval_type)"></td>
+                    <td class="text-sm" :class="isOverdue(r.next_due_date) ? 'text-amber' : ''" x-text="fmtDate(r.next_due_date)"></td>
+                    <td style="white-space:nowrap">
+                      <button class="btn btn-ghost btn-sm" @click="bookRecurring(r)" title="Jetzt buchen" :class="isOverdue(r.next_due_date)?'text-amber':''">📌 Buchen</button>
+                      <button class="btn btn-ghost btn-icon" @click="editRecurring(r)">✏️</button>
+                      <button class="btn btn-ghost btn-icon" @click="deleteRecurring(r.id)">🗑️</button>
+                    </td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+          <!-- Ausgaben -->
+          <div class="card">
+            <div class="card-title" style="color:var(--red)">Wiederkehrende Ausgaben</div>
+            <template x-if="recurringRules.filter(r=>r.type==='expense').length===0">
+              <div class="text-muted text-sm">Noch keine Ausgaben konfiguriert.</div>
+            </template>
+            <table class="data-table" x-show="recurringRules.filter(r=>r.type==='expense').length>0">
+              <thead><tr><th>Name</th><th>Betrag</th><th>Intervall</th><th>Nächste Fälligkeit</th><th></th></tr></thead>
+              <tbody>
+                <template x-for="r in recurringRules.filter(r=>r.type==='expense')" :key="r.id">
+                  <tr>
+                    <td>
+                      <div class="fw-600" x-text="r.name"></div>
+                      <div class="text-xs text-muted" x-text="r.category_name ? r.category_icon + ' ' + r.category_name : ''"></div>
+                    </td>
+                    <td class="text-red fw-600" x-text="eur(r.amount)"></td>
+                    <td class="text-muted text-sm" x-text="intervalLabel(r.interval_type)"></td>
+                    <td class="text-sm" :class="isOverdue(r.next_due_date) ? 'text-amber' : ''" x-text="fmtDate(r.next_due_date)"></td>
+                    <td style="white-space:nowrap">
+                      <button class="btn btn-ghost btn-sm" @click="bookRecurring(r)" :class="isOverdue(r.next_due_date)?'text-amber':''">📌 Buchen</button>
+                      <button class="btn btn-ghost btn-icon" @click="editRecurring(r)">✏️</button>
+                      <button class="btn btn-ghost btn-icon" @click="deleteRecurring(r.id)">🗑️</button>
+                    </td>
+                  </tr>
+                </template>
+              </tbody>
+            </table>
+          </div>
+        </div>
+        <div class="card mt-12">
+          <div class="card-title">Zykluseinstellung</div>
+          <p class="text-sm text-muted mb-8">Der Zyklus startet automatisch am Fälligkeitstag der höchsten wiederkehrenden Einnahme. Alternativ kann hier ein fester Tag festgelegt werden.</p>
+          <div class="flex gap-8 items-center">
+            <label class="form-label" style="margin:0">Manueller Zyklusstart (Tag im Monat):</label>
+            <input class="form-input" style="width:80px" type="number" min="1" max="28" x-model="cycleDayInput">
+            <button class="btn btn-secondary btn-sm" @click="saveCycleDay()">Speichern</button>
+          </div>
+        </div>
+      </div>
+    </template>
+
+    <!-- ════════════ RULES ════════════ -->
+    <template x-if="view==='rules'">
+      <div class="card">
+        <p class="text-sm text-muted mb-12">Regeln ordnen Transaktionen automatisch einer Kategorie zu, basierend auf Empfänger oder Verwendungszweck. Bei manueller Korrektur hat die manuelle Angabe immer Vorrang.</p>
+        <template x-if="rules.length===0">
+          <div class="empty"><div class="empty-icon">⚙️</div><div class="empty-text">Noch keine Regeln</div></div>
+        </template>
+        <table class="data-table" x-show="rules.length>0">
+          <thead><tr><th>Muster</th><th>Feld</th><th>Kategorie</th><th>Priorität</th><th></th></tr></thead>
+          <tbody>
+            <template x-for="r in rules" :key="r.id">
+              <tr>
+                <td class="fw-600" x-text="r.pattern"></td>
+                <td class="text-muted" x-text="r.field==='payee' ? 'Empfänger' : r.field==='purpose' ? 'Verwendungszweck' : 'Beides'"></td>
+                <td><span class="badge" x-text="r.category_name || '–'"></span></td>
+                <td class="text-muted" x-text="r.priority"></td>
+                <td style="text-align:right">
+                  <button class="btn btn-ghost btn-icon" @click="editRule(r)">✏️</button>
+                  <button class="btn btn-ghost btn-icon" @click="deleteRule(r.id)">🗑️</button>
+                </td>
+              </tr>
+            </template>
+          </tbody>
+        </table>
+      </div>
+    </template>
+
+    <!-- ════════════ BUDGETS ════════════ -->
+    <template x-if="view==='budgets'">
+      <div>
+        <div class="two-col">
+          <div class="card">
+            <div class="card-title">Budgets (aktueller Zyklus)</div>
+            <template x-if="budgets.length===0">
+              <div class="empty"><div class="empty-icon">📊</div><div class="empty-text">Noch keine Budgets</div></div>
+            </template>
+            <template x-for="b in budgetsWithSpent" :key="b.id">
+              <div class="budget-item">
+                <div class="budget-cat">
+                  <span x-text="b.category_icon || '📁'"></span>
+                  <span x-text="b.category_name"></span>
+                </div>
+                <div class="budget-bar">
+                  <div class="progress-bar">
+                    <div class="progress-fill" :style="`width:${Math.min(100, b.pct)}%;background:${b.pct>100?'var(--red)':b.pct>80?'var(--amber)':'var(--accent)'}`"></div>
+                  </div>
+                </div>
+                <div class="budget-nums" style="min-width:110px">
+                  <span :class="b.pct>100?'budget-over':'budget-ok'" x-text="eur(b.spent)"></span>
+                  <span class="text-muted"> / </span>
+                  <span x-text="eur(b.amount)"></span>
+                </div>
+                <button class="btn btn-ghost btn-icon btn-sm" @click="editBudget(b)">✏️</button>
+                <button class="btn btn-ghost btn-icon btn-sm" @click="deleteBudget(b.id)">🗑️</button>
+              </div>
+            </template>
+          </div>
+          <div class="card">
+            <div class="card-title">Ausgaben nach Kategorie</div>
+            <canvas id="catChart" style="max-height:280px"></canvas>
+            <div class="mt-8 text-xs text-muted">Zeitraum: aktueller Monat</div>
+          </div>
+        </div>
+      </div>
+    </template>
+
+    <!-- ════════════ GOALS ════════════ -->
+    <template x-if="view==='goals'">
+      <div>
+        <template x-if="goals.length===0">
+          <div class="card"><div class="empty">
+            <div class="empty-icon">🎯</div>
+            <div class="empty-text">Noch keine Sparziele</div>
+            <div class="empty-sub">Lege ein erstes Sparziel an.</div>
+          </div></div>
+        </template>
+        <div class="three-col">
+          <template x-for="g in goals" :key="g.id">
+            <div class="card">
+              <div class="flex justify-between items-center mb-8">
+                <div class="fw-600" x-text="g.name"></div>
+                <div>
+                  <button class="btn btn-ghost btn-icon btn-sm" @click="editGoal(g)">✏️</button>
+                  <button class="btn btn-ghost btn-icon btn-sm" @click="deleteGoal(g.id)">🗑️</button>
+                </div>
+              </div>
+              <div class="goal-amounts">
+                <span x-text="eur(g.current_amount)"></span> von <span x-text="eur(g.target_amount)"></span>
+                <span class="goal-pct" x-text="Math.round((g.current_amount/g.target_amount)*100) + '%'"></span>
+              </div>
+              <div class="progress-bar">
+                <div class="progress-fill" :style="`width:${Math.min(100,(g.current_amount/g.target_amount)*100)}%;background:${g.color}`"></div>
+              </div>
+              <template x-if="g.target_date">
+                <div class="mt-4 text-xs text-muted">Zieldatum: <span x-text="fmtDate(g.target_date)"></span></div>
+              </template>
+              <template x-if="g.monthly_contribution > 0">
+                <div class="mt-4 text-xs text-muted">Monatl. Sparrate: <span x-text="eur(g.monthly_contribution)"></span></div>
+              </template>
+              <!-- Quick update current amount -->
+              <div class="flex gap-8 mt-8">
+                <input class="form-input" type="number" step="0.01" :placeholder="'Aktuell: ' + g.current_amount" x-model="g._newAmount">
+                <button class="btn btn-secondary btn-sm" @click="updateGoalAmount(g)">Aktualisieren</button>
+              </div>
+            </div>
+          </template>
+        </div>
+      </div>
+    </template>
+
+    <!-- ════════════ POTS ════════════ -->
+    <template x-if="view==='pots'">
+      <div>
+        <!-- Account selector + summary -->
+        <div class="card mb-16">
+          <div class="flex gap-8 items-center" style="flex-wrap:wrap">
+            <label class="form-label" style="margin:0">Konto:</label>
+            <select class="form-select" style="max-width:220px" x-model="potsAccount" @change="loadPots()">
+              <option value="">Alle Konten</option>
+              <template x-for="acc in accounts" :key="acc.id">
+                <option :value="acc.id" x-text="acc.name"></option>
+              </template>
+            </select>
+          </div>
+          <template x-if="potsAccount">
+            <div class="three-col mt-12">
+              <div class="stat-card">
+                <div class="stat-label">Kontostand</div>
+                <div class="stat-value" x-text="eur(accounts.find(a=>a.id===potsAccount)?.balance ?? 0)"></div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-label">Reserviert in Töpfen</div>
+                <div class="stat-value text-amber" x-text="eur(pots.filter(p=>p.account_id===potsAccount).reduce((s,p)=>s+p.target_amount,0))"></div>
+              </div>
+              <div class="stat-card">
+                <div class="stat-label">Frei verfügbar</div>
+                <div class="stat-value"
+                     :class="(accounts.find(a=>a.id===potsAccount)?.free_balance ?? 0) >= 0 ? 'text-green' : 'text-red'"
+                     x-text="eur(accounts.find(a=>a.id===potsAccount)?.free_balance ?? 0)"></div>
+              </div>
+            </div>
+          </template>
+        </div>
+
+        <!-- Pots list -->
+        <template x-if="pots.length === 0">
+          <div class="card"><div class="empty">
+            <div class="empty-icon">🪣</div>
+            <div class="empty-text">Noch keine Töpfe</div>
+            <div class="empty-sub">Töpfe reservieren einen Teil des Kontosaldos für einen bestimmten Zweck.</div>
+          </div></div>
+        </template>
+        <div class="three-col">
+          <template x-for="pot in pots" :key="pot.id">
+            <div class="card" style="border-top:3px solid" :style="`border-color:${pot.color}`">
+              <div class="flex justify-between items-center mb-8">
+                <div class="fw-600" x-text="pot.name"></div>
+                <div>
+                  <button class="btn btn-ghost btn-icon btn-sm" @click="editPot(pot)">✏️</button>
+                  <button class="btn btn-ghost btn-icon btn-sm" @click="deletePot(pot.id)">🗑️</button>
+                </div>
+              </div>
+              <div class="text-sm text-muted" x-text="pot.account_name"></div>
+              <div class="fw-600 mt-4" style="font-size:1.1rem" x-text="eur(pot.target_amount)"></div>
+              <div class="text-xs text-muted mt-2">reserviert</div>
+            </div>
+          </template>
+        </div>
+      </div>
+    </template>
+
+    <!-- ════════════ EXPORT / IMPORT ════════════ -->
+    <template x-if="view==='export'">
+      <div>
+        <div class="two-col mb-16">
+          <div class="card">
+            <div class="card-title">JSON Export</div>
+            <p class="text-sm text-muted mb-12">Exportiere alle Daten als JSON-Datei. Enthält Konten, Transaktionen, Kategorien, Regeln, Budgets, Sparziele und Töpfe.</p>
+            <button class="btn btn-primary" @click="exportData()">💾 Daten exportieren</button>
+          </div>
+          <div class="card">
+            <div class="card-title">JSON Import</div>
+            <p class="text-sm text-muted mb-12">Importiere eine zuvor exportierte JSON-Datei. <strong style="color:var(--red)">Achtung: überschreibt alle vorhandenen Daten.</strong></p>
+            <input type="file" accept=".json" id="importFile" style="display:none" @change="importData($event)">
+            <label for="importFile" class="btn btn-secondary" style="cursor:pointer">📂 JSON importieren</label>
+            <div class="mt-8 text-sm text-muted" x-text="importStatus"></div>
+          </div>
+        </div>
+
+        <!-- CSV Import (FR-D2) -->
+        <div class="card">
+          <div class="card-title">CSV Import</div>
+          <p class="text-sm text-muted mb-12">Importiere Transaktionen aus einer Bankexport-CSV. Wähle die Datei und ordne die Spalten zu.</p>
+
+          <!-- Step 1: upload -->
+          <template x-if="csvState === null">
+            <div>
+              <input type="file" accept=".csv,.txt" id="csvFile" style="display:none" @change="loadCsvPreview($event)">
+              <label for="csvFile" class="btn btn-secondary" style="cursor:pointer">📄 CSV-Datei auswählen</label>
+            </div>
+          </template>
+
+          <!-- Step 2: mapping -->
+          <template x-if="csvState === 'mapping'">
+            <div>
+              <div class="two-col mb-12">
+                <div class="form-group">
+                  <label class="form-label">Trennzeichen</label>
+                  <select class="form-select" x-model="csvConfig.delimiter" @change="reparsePreview()">
+                    <option value=";">Semikolon ( ; )</option>
+                    <option value=",">Komma ( , )</option>
+                    <option value="&#9;">Tabulator</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Dezimalzeichen</label>
+                  <select class="form-select" x-model="csvConfig.decimal_sep">
+                    <option value=",">Komma ( , ) — Deutsch</option>
+                    <option value=".">Punkt ( . ) — Englisch</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Datumsformat</label>
+                  <select class="form-select" x-model="csvConfig.date_format">
+                    <option value="%d.%m.%Y">TT.MM.JJJJ (26.06.2026)</option>
+                    <option value="%Y-%m-%d">JJJJ-MM-TT (2026-06-26)</option>
+                    <option value="%d/%m/%Y">TT/MM/JJJJ (26/06/2026)</option>
+                    <option value="%m/%d/%Y">MM/TT/JJJJ (06/26/2026)</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Konto *</label>
+                  <select class="form-select" x-model="csvConfig.account_id">
+                    <option value="">Konto wählen …</option>
+                    <template x-for="acc in accounts" :key="acc.id">
+                      <option :value="acc.id" x-text="acc.name"></option>
+                    </template>
+                  </select>
+                </div>
+              </div>
+
+              <div class="two-col mb-12">
+                <div class="form-group">
+                  <label class="form-label">Spalte: Datum *</label>
+                  <select class="form-select" x-model="csvConfig.col_date">
+                    <option value="">— nicht zugeordnet —</option>
+                    <template x-for="h in csvHeaders" :key="h"><option :value="h" x-text="h"></option></template>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Spalte: Betrag *</label>
+                  <select class="form-select" x-model="csvConfig.col_amount">
+                    <option value="">— nicht zugeordnet —</option>
+                    <template x-for="h in csvHeaders" :key="h"><option :value="h" x-text="h"></option></template>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Spalte: Empfänger</label>
+                  <select class="form-select" x-model="csvConfig.col_payee">
+                    <option value="">— nicht zugeordnet —</option>
+                    <template x-for="h in csvHeaders" :key="h"><option :value="h" x-text="h"></option></template>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Spalte: Verwendungszweck</label>
+                  <select class="form-select" x-model="csvConfig.col_purpose">
+                    <option value="">— nicht zugeordnet —</option>
+                    <template x-for="h in csvHeaders" :key="h"><option :value="h" x-text="h"></option></template>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Typ-Bestimmung</label>
+                  <select class="form-select" x-model="csvConfig.default_type">
+                    <option value="auto">Vorzeichen des Betrags (negativ = Ausgabe)</option>
+                    <option value="expense">Alle als Ausgabe</option>
+                    <option value="income">Alle als Einnahme</option>
+                  </select>
+                </div>
+                <div class="form-group">
+                  <label class="form-label">Spalte: Typ (optional)</label>
+                  <select class="form-select" x-model="csvConfig.col_type">
+                    <option value="">— nicht zugeordnet —</option>
+                    <template x-for="h in csvHeaders" :key="h"><option :value="h" x-text="h"></option></template>
+                  </select>
+                </div>
+              </div>
+
+              <!-- Preview table -->
+              <div class="mb-12" x-show="csvPreview.length > 0">
+                <div class="card-title text-sm mb-4">Vorschau (erste 5 Zeilen)</div>
+                <div style="overflow-x:auto">
+                  <table class="data-table">
+                    <thead>
+                      <tr>
+                        <template x-for="h in csvHeaders" :key="h">
+                          <th x-text="h"></th>
+                        </template>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      <template x-for="(row, ri) in csvPreview" :key="ri">
+                        <tr>
+                          <template x-for="(cell, ci) in row" :key="ci">
+                            <td class="text-sm text-muted" x-text="cell"></td>
+                          </template>
+                        </tr>
+                      </template>
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div class="flex gap-8">
+                <button class="btn btn-primary" @click="importCsv()">📥 Importieren</button>
+                <button class="btn btn-ghost" @click="csvState=null; csvText=''">Abbrechen</button>
+              </div>
+            </div>
+          </template>
+
+          <!-- Step 3: result -->
+          <template x-if="csvState === 'done'">
+            <div>
+              <div class="text-sm" x-text="csvResult"></div>
+              <button class="btn btn-ghost btn-sm mt-8" @click="csvState=null; csvText=''">Weitere CSV importieren</button>
+            </div>
+          </template>
+        </div>
+      </div>
+    </template>
+
+  </div><!-- /page-content -->
+</div><!-- /main -->
+
+
+<!-- ═══════════════════════════════════════════
+     MODALS
+     ═══════════════════════════════════════════ -->
+
+<!-- Transaction Modal -->
+<div class="modal-overlay" x-show="modals.tx" @click.self="modals.tx=false">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" x-text="txForm.id ? 'Transaktion bearbeiten' : 'Neue Transaktion'"></div>
+      <div class="modal-close" @click="modals.tx=false">✕</div>
+    </div>
+    <div class="modal-body">
+      <div class="form-row mb-8">
+        <div class="form-group" style="margin:0">
+          <label class="form-label">Typ *</label>
+          <select class="form-select" x-model="txForm.type">
+            <option value="expense">Ausgabe</option>
+            <option value="income">Einnahme</option>
+            <option value="transfer">Umbuchung</option>
+          </select>
+        </div>
+        <div class="form-group" style="margin:0">
+          <label class="form-label">Datum *</label>
+          <input class="form-input" type="date" x-model="txForm.date">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Konto *</label>
+          <select class="form-select" x-model="txForm.account_id">
+            <option value="">Konto wählen …</option>
+            <template x-for="acc in accounts" :key="acc.id">
+              <option :value="acc.id" x-text="acc.name"></option>
+            </template>
+          </select>
+        </div>
+        <div class="form-group" x-show="txForm.type==='transfer'">
+          <label class="form-label">Zielkonto *</label>
+          <select class="form-select" x-model="txForm.transfer_to_account_id">
+            <option value="">Zielkonto …</option>
+            <template x-for="acc in accounts.filter(a=>a.id!==txForm.account_id)" :key="acc.id">
+              <option :value="acc.id" x-text="acc.name"></option>
+            </template>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Betrag (€) *</label>
+        <input class="form-input" type="number" step="0.01" min="0" placeholder="0,00" x-model="txForm.amount">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Empfänger / Auftraggeber</label>
+          <input class="form-input" type="text" placeholder="z. B. REWE" x-model="txForm.payee"
+                 @input.debounce="suggestCategory()">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Verwendungszweck</label>
+          <input class="form-input" type="text" placeholder="z. B. Einkauf" x-model="txForm.purpose"
+                 @input.debounce="suggestCategory()">
+        </div>
+      </div>
+      <div class="form-group" x-show="txForm.type!=='transfer'">
+        <label class="form-label">Kategorie</label>
+        <select class="form-select" x-model="txForm.category_id">
+          <option value="">Keine Kategorie</option>
+          <template x-for="cat in categories.filter(c=>c.type===(txForm.type==='income'?'income':'expense') && !c.parent_id)" :key="cat.id">
+            <option :value="cat.id" x-text="cat.icon + ' ' + cat.name" disabled style="font-weight:600;color:var(--text-muted)"></option>
+            <template x-for="sub in categories.filter(c=>c.type===(txForm.type==='income'?'income':'expense') && c.parent_id===cat.id)" :key="sub.id">
+              <option :value="sub.id" x-text="'  ' + sub.icon + ' ' + sub.name"></option>
+            </template>
+          </template>
+        </select>
+        <div class="text-xs text-muted mt-4" x-show="txAutocat">💡 Automatisch zugeordnet basierend auf Empfänger/Verwendungszweck</div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Notiz</label>
+        <input class="form-input" type="text" placeholder="Optional …" x-model="txForm.note">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" @click="modals.tx=false">Abbrechen</button>
+      <button class="btn btn-primary" @click="saveTx()">Speichern</button>
+    </div>
+  </div>
+</div>
+
+<!-- Account Modal -->
+<div class="modal-overlay" x-show="modals.account" @click.self="modals.account=false">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" x-text="accForm.id ? 'Konto bearbeiten' : 'Neues Konto'"></div>
+      <div class="modal-close" @click="modals.account=false">✕</div>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Name *</label>
+        <input class="form-input" type="text" placeholder="z. B. Girokonto DKB" x-model="accForm.name">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Typ *</label>
+          <select class="form-select" x-model="accForm.type">
+            <option value="checking">Girokonto</option>
+            <option value="savings">Sparkonto</option>
+            <option value="cash">Bargeld</option>
+            <option value="credit">Kreditkarte</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Währung</label>
+          <select class="form-select" x-model="accForm.currency">
+            <option value="EUR">EUR</option>
+            <option value="USD">USD</option>
+            <option value="CHF">CHF</option>
+            <option value="GBP">GBP</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Startsaldo (€)</label>
+        <input class="form-input" type="number" step="0.01" placeholder="0,00" x-model="accForm.initial_balance">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" @click="modals.account=false">Abbrechen</button>
+      <button class="btn btn-primary" @click="saveAccount()">Speichern</button>
+    </div>
+  </div>
+</div>
+
+<!-- Category Modal -->
+<div class="modal-overlay" x-show="modals.category" @click.self="modals.category=false">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" x-text="catForm.id ? 'Kategorie bearbeiten' : (catForm.parent_id ? 'Neue Untergruppe' : 'Neue Übergruppe')"></div>
+      <div class="modal-close" @click="modals.category=false">✕</div>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Icon</label>
+          <input class="form-input" type="text" placeholder="Emoji" x-model="catForm.icon" style="font-size:20px">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Typ</label>
+          <select class="form-select" x-model="catForm.type" :disabled="!!catForm.parent_id">
+            <option value="expense">Ausgabe</option>
+            <option value="income">Einnahme</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Name *</label>
+        <input class="form-input" type="text" placeholder="z. B. Lebensmittel" x-model="catForm.name">
+      </div>
+      <div class="form-group" x-show="!catForm.parent_id && !catForm.id">
+        <label class="form-label">Übergruppe (leer = Übergruppe selbst)</label>
+        <select class="form-select" x-model="catForm.parent_id">
+          <option value="">Keine (Übergruppe)</option>
+          <template x-for="cat in categories.filter(c=>c.type===catForm.type && !c.parent_id)" :key="cat.id">
+            <option :value="cat.id" x-text="cat.icon + ' ' + cat.name"></option>
+          </template>
+        </select>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" @click="modals.category=false">Abbrechen</button>
+      <button class="btn btn-primary" @click="saveCategory()">Speichern</button>
+    </div>
+  </div>
+</div>
+
+<!-- Recurring Modal -->
+<div class="modal-overlay" x-show="modals.recurring" @click.self="modals.recurring=false">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" x-text="recurringForm.id ? 'Eintrag bearbeiten' : 'Wiederkehrender Eintrag'"></div>
+      <div class="modal-close" @click="modals.recurring=false">✕</div>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Typ *</label>
+          <select class="form-select" x-model="recurringForm.type">
+            <option value="expense">Ausgabe</option>
+            <option value="income">Einnahme</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Intervall *</label>
+          <select class="form-select" x-model="recurringForm.interval_type">
+            <option value="monthly">Monatlich</option>
+            <option value="quarterly">Vierteljährlich</option>
+            <option value="biannual">Halbjährlich</option>
+            <option value="annual">Jährlich</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Name *</label>
+        <input class="form-input" type="text" placeholder="z. B. Miete" x-model="recurringForm.name">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Betrag (€) *</label>
+          <input class="form-input" type="number" step="0.01" min="0" x-model="recurringForm.amount">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Fällig am (Tag im Monat)</label>
+          <input class="form-input" type="number" min="1" max="28" x-model="recurringForm.day_of_month">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Konto *</label>
+          <select class="form-select" x-model="recurringForm.account_id">
+            <option value="">Konto wählen …</option>
+            <template x-for="acc in accounts" :key="acc.id">
+              <option :value="acc.id" x-text="acc.name"></option>
+            </template>
+          </select>
+        </div>
+        <div class="form-group">
+          <label class="form-label">Kategorie</label>
+          <select class="form-select" x-model="recurringForm.category_id">
+            <option value="">Keine</option>
+            <template x-for="cat in categories.filter(c=>c.type===recurringForm.type && !c.parent_id)" :key="cat.id">
+              <option :value="cat.id" x-text="cat.icon+' '+cat.name" disabled style="font-weight:600"></option>
+              <template x-for="sub in categories.filter(c=>c.type===recurringForm.type && c.parent_id===cat.id)" :key="sub.id">
+                <option :value="sub.id" x-text="'  '+sub.icon+' '+sub.name"></option>
+              </template>
+            </template>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Empfänger</label>
+          <input class="form-input" type="text" x-model="recurringForm.payee">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Nächste Fälligkeit *</label>
+          <input class="form-input" type="date" x-model="recurringForm.next_due_date">
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" @click="modals.recurring=false">Abbrechen</button>
+      <button class="btn btn-primary" @click="saveRecurring()">Speichern</button>
+    </div>
+  </div>
+</div>
+
+<!-- Rule Modal -->
+<div class="modal-overlay" x-show="modals.rule" @click.self="modals.rule=false">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" x-text="ruleForm.id ? 'Regel bearbeiten' : 'Neue Auto-Regel'"></div>
+      <div class="modal-close" @click="modals.rule=false">✕</div>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Muster (Textteil) *</label>
+          <input class="form-input" type="text" placeholder="z. B. REWE" x-model="ruleForm.pattern">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Suche in</label>
+          <select class="form-select" x-model="ruleForm.field">
+            <option value="payee">Empfänger</option>
+            <option value="purpose">Verwendungszweck</option>
+            <option value="both">Beiden</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Kategorie *</label>
+        <select class="form-select" x-model="ruleForm.category_id">
+          <option value="">Kategorie wählen …</option>
+          <template x-for="cat in categories.filter(c=>!c.parent_id)" :key="cat.id">
+            <option :value="cat.id" x-text="cat.icon+' '+cat.name" disabled style="font-weight:600"></option>
+            <template x-for="sub in categories.filter(c=>c.parent_id===cat.id)" :key="sub.id">
+              <option :value="sub.id" x-text="'  '+sub.icon+' '+sub.name"></option>
+            </template>
+          </template>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Priorität (höher = zuerst angewendet)</label>
+        <input class="form-input" type="number" x-model="ruleForm.priority" min="0" max="100">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" @click="modals.rule=false">Abbrechen</button>
+      <button class="btn btn-primary" @click="saveRule()">Speichern</button>
+    </div>
+  </div>
+</div>
+
+<!-- Budget Modal -->
+<div class="modal-overlay" x-show="modals.budget" @click.self="modals.budget=false">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" x-text="budgetForm.id ? 'Budget bearbeiten' : 'Neues Budget'"></div>
+      <div class="modal-close" @click="modals.budget=false">✕</div>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Kategorie *</label>
+        <select class="form-select" x-model="budgetForm.category_id">
+          <option value="">Kategorie wählen …</option>
+          <template x-for="cat in categories.filter(c=>c.type==='expense' && !c.parent_id)" :key="cat.id">
+            <option :value="cat.id" x-text="cat.icon+' '+cat.name" disabled style="font-weight:600"></option>
+            <template x-for="sub in categories.filter(c=>c.type==='expense' && c.parent_id===cat.id)" :key="sub.id">
+              <option :value="sub.id" x-text="'  '+sub.icon+' '+sub.name"></option>
+            </template>
+          </template>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Betrag pro Zyklus (€) *</label>
+        <input class="form-input" type="number" step="0.01" min="0" x-model="budgetForm.amount">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" @click="modals.budget=false">Abbrechen</button>
+      <button class="btn btn-primary" @click="saveBudget()">Speichern</button>
+    </div>
+  </div>
+</div>
+
+<!-- Goal Modal -->
+<div class="modal-overlay" x-show="modals.goal" @click.self="modals.goal=false">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" x-text="goalForm.id ? 'Sparziel bearbeiten' : 'Neues Sparziel'"></div>
+      <div class="modal-close" @click="modals.goal=false">✕</div>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Name *</label>
+        <input class="form-input" type="text" placeholder="z. B. Notgroschen" x-model="goalForm.name">
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Zielbetrag (€) *</label>
+          <input class="form-input" type="number" step="0.01" min="0" x-model="goalForm.target_amount">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Bereits gespart (€)</label>
+          <input class="form-input" type="number" step="0.01" min="0" x-model="goalForm.current_amount">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label class="form-label">Monatl. Sparrate (€)</label>
+          <input class="form-input" type="number" step="0.01" min="0" x-model="goalForm.monthly_contribution"
+                 placeholder="Wird von Verfügbar abgezogen">
+        </div>
+        <div class="form-group">
+          <label class="form-label">Zieldatum (optional)</label>
+          <input class="form-input" type="date" x-model="goalForm.target_date">
+        </div>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Farbe</label>
+        <input class="form-input" type="color" x-model="goalForm.color" style="height:38px;padding:2px 6px">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" @click="modals.goal=false">Abbrechen</button>
+      <button class="btn btn-primary" @click="saveGoal()">Speichern</button>
+    </div>
+  </div>
+</div>
+
+<!-- Pot Modal -->
+<div class="modal-overlay" x-show="modals.pot" @click.self="modals.pot=false">
+  <div class="modal">
+    <div class="modal-header">
+      <div class="modal-title" x-text="potForm.id ? 'Topf bearbeiten' : 'Neuer Topf'"></div>
+      <div class="modal-close" @click="modals.pot=false">✕</div>
+    </div>
+    <div class="modal-body">
+      <div class="form-group">
+        <label class="form-label">Konto *</label>
+        <select class="form-select" x-model="potForm.account_id">
+          <option value="">Konto wählen …</option>
+          <template x-for="acc in accounts" :key="acc.id">
+            <option :value="acc.id" x-text="acc.name"></option>
+          </template>
+        </select>
+      </div>
+      <div class="form-group">
+        <label class="form-label">Name *</label>
+        <input class="form-input" type="text" placeholder="z. B. Notgroschen" x-model="potForm.name">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Reservierter Betrag (€) *</label>
+        <input class="form-input" type="number" step="0.01" min="0" placeholder="0,00" x-model="potForm.target_amount">
+      </div>
+      <div class="form-group">
+        <label class="form-label">Farbe</label>
+        <input class="form-input" type="color" x-model="potForm.color" style="height:38px;padding:2px 6px">
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn btn-secondary" @click="modals.pot=false">Abbrechen</button>
+      <button class="btn btn-primary" @click="savePot()">Speichern</button>
+    </div>
+  </div>
+</div>
+
+<script src="/static/app.js"></script>
+</body>
+</html>
