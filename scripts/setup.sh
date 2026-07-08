@@ -23,7 +23,7 @@ fi
 # Python virtualenv
 if [ ! -d ".venv" ]; then
   echo "→ Erstelle virtuelle Python-Umgebung …"
-  python3 -m venv .venv
+  python -m venv .venv
 fi
 
 echo "→ Installiere Python-Abhängigkeiten …"
