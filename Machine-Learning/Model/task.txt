@@ -1,0 +1,58 @@
+Folgender Task:
+
+Für die Kategorisierung von Finanzdaten aus einem Kontoauszug wird ein LLM Modell gesucht, das lokal auf dem PC läuft. 
+Der zu kategorisierende Text ist deutsch. Das Modell soll so klein sein wie möglich.
+
+Welches LLM kann ich von Huggingface runterladen, um es dann auf diesen Task feinzutunen?
+
+Folgende Kategorien habe ich bisher:
+1. groceries
+farmers market
+supermarket
+
+2. lifestyle&fun 
+going out (food&drinks)
+sports
+vacation
+cinema
+theatre/opera
+presents
+shopping (clothes)
+shopping (rest)
+
+3. mobility
+train tickets
+öpnv
+bicycle
+taxi
+
+4. family
+
+5. education
+online courses
+books
+
+6. healthcare
+pharmacy
+doctor
+
+7. abos
+streaming 
+cloud/software
+AI 
+gym
+self-hosting
+(e)-papers
+memberships
+
+8. fixed costs
+rent
+electricity
+rundfunk
+telephone
+insurance
+internet
+gas/heating
+
+
+

@@ -2,3 +2,13 @@
 __pycache__/
 # data ordner
 data/
+.env
+# Memory (echte Händler-Zuordnungen -> nicht committen)
+memory.json
+**/memory.json
+.venv/
+checkpoints/
+Machine-Learning/3_Model/checkpoints/
+*.pt
+*.safetensors
+allfiles.txt
