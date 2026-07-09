@@ -16,5 +16,6 @@ Machine-Learning/3_Model/checkpoints/
 *.safetensors
 allfiles.txt
 .DS_Store
+../.DS_Store
 Machine-Learning/Model/expense_memory.sqlite
 >>>>>>> Stashed changes
