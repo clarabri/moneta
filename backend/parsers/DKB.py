@@ -36,7 +36,9 @@ def load(file: str) -> pd.DataFrame:
         "Zahlungsempfänger*in": "payee",
         "Verwendungszweck": "description",
         "Umsatztyp": "transaction_type",
-        "Betrag (€)": "amount"
+        "Betrag (€)": "amount",
+        "Kategorie": "category",
+        "Unterkategorie": "subcateory"
     })
 
     # Convert dates
@@ -63,7 +65,6 @@ def load(file: str) -> pd.DataFrame:
     # Add metadata
     df["currency"] = "EUR"
     df["source"] = "DKB"
-    df["category"] = None # this will be the ML defined tag
     df["account"] = account_df.iloc[0, 1].strip('"')
     df["transaction_id"] = df.apply(create_transaction_id, axis=1)
 
@@ -79,7 +80,8 @@ def load(file: str) -> pd.DataFrame:
             "description",
             "source",
             "transaction_type",
+            "account",
             "category",
-            "account"
+            "subcateory"
         ]
     ]
