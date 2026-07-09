@@ -1,8 +1,11 @@
-"""Payee-Bereinigung für die Kategorisierung.
+"""Textaufbereitung für die Kategorisierung (payee + Verwendungszweck).
 
 clean_payee   -> Ort + Zahlen aus dem (bereits normalisierten) payee entfernen,
                  damit Embeddings nach HÄNDLER clustern statt nach STADT.
 merchant_key  -> zusätzlich Rechtsformen/Zusätze am Ende weg -> kurze, stabile Händler-Kennung.
+
+normalize_description -> Freitext-Verwendungszweck für Embeddings/TF-IDF. Anderes Ziel als
+                 die payee-Kette: Wortgrenzen BLEIBEN, dafür fliegen Referenz-IDs raus.
 
 Erwartet payees im Format von DKB.normalize_text (klein, ohne Akzente, Wörter mit "_" verklebt).
 
@@ -93,6 +96,20 @@ def normalize(text: str) -> str:
     s = unicodedata.normalize("NFKD", str(text).lower())
     s = "".join(c for c in s if not unicodedata.combining(c))
     return re.sub(r"[^a-z0-9]", "", s)
+
+
+def normalize_description(text: str) -> str:
+    """Freitext-Verwendungszweck vereinheitlichen: klein, ohne Akzente,
+    Satzzeichen als Trenner, alle Tokens mit Ziffern (Daten/Referenz-IDs) raus.
+
+    Anders als normalize(): Leerzeichen bleiben erhalten, sonst verklebt der Freitext
+    zu einem einzigen Token und Wortmerkmale gehen verloren.
+    """
+    s = unicodedata.normalize("NFKD", str(text).lower())
+    s = "".join(c for c in s if not unicodedata.combining(c))
+    s = re.sub(r"[^a-z0-9]+", " ", s)   # Satzzeichen TRENNEN, nicht löschen
+    s = re.sub(r"\S*\d\S*", " ", s)     # 1051448269343, pp.3766.pp, 06.07.2026 ...
+    return re.sub(r"\s+", " ", s).strip()
 
 
 def to_merchant_key(raw_payee: str) -> str:

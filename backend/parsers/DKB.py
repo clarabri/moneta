@@ -11,6 +11,17 @@ def create_transaction_id(row):
     )
     return hashlib.md5(key.encode()).hexdigest()
 
+# Function to find the header row, since the preamble length varies between exports
+def find_header_row(file: str) -> int:
+    """Return the 0-based line index of the column header in a DKB CSV export."""
+
+    with open(file, encoding="utf-8-sig") as fh:
+        for i, line in enumerate(fh):
+            if line.lstrip('"').startswith("Buchungsdatum"):
+                return i
+
+    raise ValueError(f"No 'Buchungsdatum' header row found in {file}")
+
 # Function to load a DKB CSV export and return a normalized DataFrame
 def load(file: str) -> pd.DataFrame:
     """Load a DKB CSV export and return a normalized DataFrame."""
@@ -19,7 +30,7 @@ def load(file: str) -> pd.DataFrame:
         file,
         sep=";",
         encoding="utf-8",
-        skiprows=4
+        skiprows=find_header_row(file)
     )
     account_df = pd.read_csv(
         file,

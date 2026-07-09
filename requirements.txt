@@ -2,6 +2,7 @@ fastapi>=0.115.0
 uvicorn[standard]>=0.30.0
 python-multipart>=0.0.9
 sqlcipher3
+pandas
 # Machine learning / fine-tuning dependencies (not pinned; adjust for your CUDA/PyTorch setup)
 torch
 transformers
@@ -10,3 +11,7 @@ accelerate
 peft
 trl
 scikit-learn
+# Transaction categorization
+# ollama is only the client; it needs a local Ollama server serving qwen2.5:3b
+ollama
+geonamescache
