@@ -1,4 +1,20 @@
 .venv
 __pycache__/
 # data ordner
+<<<<<<< Updated upstream
 data/
+=======
+data/
+.env
+# Memory (echte Händler-Zuordnungen -> nicht committen)
+memory.json
+**/memory.json
+.venv/
+checkpoints/
+Machine-Learning/3_Model/checkpoints/
+*.pt
+*.safetensors
+allfiles.txt
+.DS_Store
+Machine-Learning/Model/expense_memory.sqlite
+>>>>>>> Stashed changes
