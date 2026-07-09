@@ -12,3 +12,4 @@ Machine-Learning/3_Model/checkpoints/
 *.pt
 *.safetensors
 allfiles.txt
+.DS_Store
