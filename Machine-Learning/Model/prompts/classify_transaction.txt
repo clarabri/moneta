@@ -52,10 +52,10 @@ ALDI SUED FIL.017 KIEL
 => groceries
 
 PAYPAL *SPOTIFY
-=> abos
+=> subscriptions
 
 NETFLIX.COM
-=> abos
+=> subscriptions
 
 DEUTSCHE BAHN AG
 => mobility
